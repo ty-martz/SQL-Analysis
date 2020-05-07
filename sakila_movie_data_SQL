@@ -1,0 +1,54 @@
+/*Query 1: Used to find rental length for family friendly movies*/
+WITH t1 as
+(
+SELECT category.name AS category, NTILE (4) OVER (ORDER BY rental_duration) AS standard_quartile
+FROM film
+JOIN film_category ON
+film.film_id = film_category.film_id
+JOIN category
+ON category.category_id = film_category.category_id
+WHERE category.name IN (
+'Animation', 'Children', 'Classics', 'Comedy', 'Family', 'Music'
+)
+)
+SELECT category, standard_quartile, count(category) FROM t1
+GROUP BY category, standard_quartile
+ORDER by 1,2
+
+/*Query 2: Used to find what top customers have paid*/
+WITH t1 AS
+(SELECT customer_id
+FROM payment
+GROUP BY 1
+ORDER BY SUM(amount) DESC
+LIMIT 10),
+t2 AS
+(SELECT
+DATE_TRUNC('month', payment_date) AS pay_month,
+first_name||' '||last_name AS full_name,
+COUNT(*) AS pay_count,
+SUM(amount) AS pay_amount
+FROM customer c
+JOIN t1
+ON c.customer_id = t1.customer_id
+JOIN payment p
+ON t1.customer_id = p.customer_id
+GROUP BY 1, 2
+ORDER BY 2, 1)
+SELECT *, pay_amount - LAG(pay_amount) OVER (PARTITION BY full_name ORDER BY pay_month) AS lag_difference
+FROM t2
+
+/*Query 3: Used to find monthly sales by store*/
+SELECT s.store_id, DATE_PART('month', p.payment_date) AS month, sum(p.amount)
+FROM payment p
+JOIN staff s ON p.staff_id = s.staff_id
+GROUP BY s.store_id, month
+ORDER BY s.store_id, month
+
+/*Query 4: Used to find average film cost and count of films by genre*/
+SELECT c.name AS genre, AVG(f.rental_rate) AS avg_cost, COUNT(c.name) AS num_films
+FROM film_category fc
+JOIN category c ON fc.category_id = c.category_id
+JOIN film f ON fc.film_id = f.film_id
+GROUP BY 1
+ORDER BY 1
