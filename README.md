@@ -1,2 +1,2 @@
 # SQL-Analysis
-SQL queries based on certain databases
+SQL queries based on the sakila movie database
